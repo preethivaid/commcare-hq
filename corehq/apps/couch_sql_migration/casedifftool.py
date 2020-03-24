@@ -14,6 +14,7 @@ from corehq.form_processor.utils.general import set_local_domain_sql_backend_ove
 from corehq.util.log import with_progress_bar
 
 from .casediff import (
+    add_cases_missing_from_couch,
     diff_cases,
     get_couch_cases,
     global_diff_state,
@@ -188,7 +189,10 @@ def load_and_diff_cases(case_ids, log_cases=False):
         skipped = [id for id in case_ids if id not in couch_cases]
         if skipped:
             log.info("skipping cases modified since cutoff date: %s", skipped)
-    return diff_cases_with_retry(couch_cases, log_cases=log_cases)
+    data = diff_cases_with_retry(couch_cases, log_cases=log_cases)
+    if len(set(case_ids)) > len(couch_cases):
+        add_cases_missing_from_couch(data, set(case_ids) - couch_cases.keys())
+    return data
 
 
 def _close_connections(err):
